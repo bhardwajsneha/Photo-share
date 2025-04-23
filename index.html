@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Photo Gallery</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #fff0f5;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #d63384;
+    }
+    input[type="file"] {
+      margin: 20px 0;
+    }
+    custom-upload-btn {
+    background-color: #d63384; /* Pink background */
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    display: inline-block;
+  }
+
+  .custom-upload-btn:hover {
+    background-color: #ff6b81; /* Lighter pink on hover */
+  }
+
+  .custom-upload-btn:active {
+    transform: scale(0.98); /* Slightly smaller when clicked */
+  }
+    #gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 20px;
+      justify-content: center;
+    }
+    .photo-card {
+      position: relative;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      height: 150px;
+      width: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+    }
+    .photo-card:hover {
+      transform: scale(1.05);
+      cursor: pointer;
+    }
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .delete-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: #ff6b81;
+      border: none;
+      border-radius: 50%;
+      color: white;
+      width: 24px;
+      height: 24px;
+      font-size: 16px;
+      cursor: pointer;
+      z-index: 1;
+    }
+    #clear-all {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #d63384;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    #preview-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 999;
+    }
+    #preview-modal img {
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>My Photo Gallery 💖</h1>
+  <input type="file" id="upload" accept="image/*" multiple />
+  <button id="clear-all">Delete All</button>
+  <div id="gallery"></div>
+
+  <div id="preview-modal" onclick="this.style.display='none';">
+    <img id="modal-img" src="" />
+  </div>
+
+  <script>
+    const uploadInput = document.getElementById('upload');
+    const gallery = document.getElementById('gallery');
+    const clearBtn = document.getElementById('clear-all');
+    const modal = document.getElementById('preview-modal');
+    const modalImg = document.getElementById('modal-img');
+
+    // Load saved images on page load
+    window.onload = () => {
+      const savedImages = JSON.parse(localStorage.getItem('images') || '[]');
+      savedImages.forEach((src, index) => addImageToGallery(src, index));
+    };
+
+    uploadInput.addEventListener('change', (event) => {
+      const files = Array.from(event.target.files);
+      const savedImages = JSON.parse(localStorage.getItem('images') || '[]');
+
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const maxSize = 300;
+            let width = img.width;
+            let height = img.height;
+
+            if (width > height) {
+              if (width > maxSize) {
+                height *= maxSize / width;
+                width = maxSize;
+              }
+            } else {
+              if (height > maxSize) {
+                width *= maxSize / height;
+                height = maxSize;
+              }
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const resizedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+            savedImages.push(resizedDataUrl);
+            localStorage.setItem('images', JSON.stringify(savedImages));
+            addImageToGallery(resizedDataUrl, savedImages.length - 1);
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    clearBtn.onclick = () => {
+      localStorage.removeItem('images');
+      gallery.innerHTML = '';
+    };
+
+    function addImageToGallery(src, index) {
+      const card = document.createElement('div');
+      card.className = 'photo-card';
+
+      const img = document.createElement('img');
+      img.src = src;
+      img.onclick = () => {
+        modal.style.display = 'flex';
+        modalImg.src = src;
+      };
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'delete-btn';
+      delBtn.innerText = '×';
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        let savedImages = JSON.parse(localStorage.getItem('images') || '[]');
+        savedImages.splice(index, 1);
+        localStorage.setItem('images', JSON.stringify(savedImages));
+        gallery.innerHTML = '';
+        savedImages.forEach((src, idx) => addImageToGallery(src, idx));
+      };
+
+      card.appendChild(delBtn);
+      card.appendChild(img);
+      gallery.appendChild(card);
+    }
+  </script>
+</body>
+</html>
